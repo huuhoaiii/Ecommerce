@@ -1,4 +1,4 @@
-# Ecommerce Data Analytics
+# Ecommerce Data Analytics 📊
 ## Leverage SQL queries to find meaningful insights from the data
 1. Customer Behavior Analysis
 - Top 10 Highest Frequency Customers and Their Purchasing Habits
