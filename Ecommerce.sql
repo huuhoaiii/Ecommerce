@@ -53,7 +53,7 @@ WHERE ranks = 1
 ORDER BY 2 DESC, 1;
 
 --Top 10 the Cities with the highest number of customer
-WITH sub AS (
+WITH top_cities AS (
     SELECT TOP 10 
 			customer_city,customer_state, 
 			COUNT(*) AS number_of_customer
@@ -61,7 +61,7 @@ WITH sub AS (
     GROUP BY customer_city, customer_state
 	ORDER BY 3 DESC
 ),
-sub2 as
+locations as
 (
 	SELECT
 		geolocation_city,
@@ -69,18 +69,18 @@ sub2 as
 		geolocation_lng,
 		ROW_NUMBER() OVER (PARTITION BY geolocation_city ORDER BY (SELECT NULL)) as num
 	FROM geolocation g
-	JOIN sub s
+	JOIN top_cities s
 		ON G.geolocation_city = S.customer_city
 )
 SELECT
-    s.customer_city, 
-	s.customer_state,
-    s2.geolocation_lat, 
-    s2.geolocation_lng, 
-    s.number_of_customer
-FROM sub s
-JOIN sub2 s2
-    ON s.customer_city = s2.geolocation_city
+    t.customer_city, 
+	t.customer_state,
+    l.geolocation_lat, 
+    l.geolocation_lng, 
+    t.number_of_customer
+FROM top_cities t
+JOIN locations l
+    ON t.customer_city = l.geolocation_city
 WHERE num = 1
 ORDER BY 5 DESC;
 
@@ -96,7 +96,7 @@ JOIN orders o
 JOIN order_payments p
 	ON p.order_id = o.order_id
 GROUP BY customer_unique_id
-ORDER BY 2 DESC
+ORDER BY 2 DESC;
 
 
 --2.Sales Performance	
@@ -113,14 +113,15 @@ SELECT	seller_id,
 		hour_successfull_contact, 
 		RANK() OVER (ORDER BY hour_successfull_contact) as rank
 FROM sub
+ORDER BY rank;
 
--- The number of leads closed per montn
+-- The number of leads closed per month
 
 SELECT	DATENAME(MONTH, won_date) AS Month, 
 		COUNT(*) as number_of_leads
 FROM leads_closed
 GROUP BY DATENAME(MONTH, won_date)
-ORDER BY 2 desc
+ORDER BY 2 desc;
 
 --3.Product Analysis
 --Top 10 Products with the Highest Number of Orders
@@ -137,7 +138,7 @@ Join orders o
 Join order_payments p
 	ON p.order_id = o.order_id
 GROUP BY product_category_name_english
-ORDER BY 2 DESC
+ORDER BY 2 DESC;
 
 --Top 10 Products with the Lowest Number of Orders
 SELECT TOP 10	product_category_name_english as product, 
@@ -153,7 +154,7 @@ Join orders o
 Join order_payments p
 	ON p.order_id = o.order_id
 GROUP BY product_category_name_english
-ORDER BY 2
+ORDER BY 2;
 
 --Score for each product
 SELECT	product_category_name_english as product, 
@@ -169,7 +170,7 @@ Join order_reviews o
 Join order_payments p
 	ON p.order_id = o.order_id
 GROUP BY product_category_name_english
-ORDER BY 2 DESC
+ORDER BY 2 DESC;
 
 --Top 3 Bestsellers by Business Segment for Each Month
 WITH business_segment as --business segment with products
@@ -219,23 +220,22 @@ SELECT Month, business_segment, number_of_orders
 FROM ranks
 WHERE rank<=3;
 
-
 --4.Order Analysis
 --Descriptive Statistics of Delivery Time
-WITH delay_day AS
+WITH time_delay AS
 (
-	SELECT	DATEDIFF(hour, order_delivered_customer_date,  
-			order_estimated_delivery_date) as hour_delay
+	SELECT	DATEDIFF(day, order_delivered_customer_date,  
+			order_estimated_delivery_date) as day_delivery
 	FROM orders
 )
-SELECT	MAX(hour_delay) AS hightest_delay, 
-		-MIN(hour_delay) AS lowest_delay,
-		AVG(CASE WHEN hour_delay > 0 THEN hour_delay ELSE NULL END) AS AverageHourDelay,
-		-AVG(CASE WHEN hour_delay < 0 THEN hour_delay ELSE NULL END) AS AverageHournoDelay
-FROM delay_day;
+SELECT	MAX(day_delivery) AS Fastest_delivery, 
+		-MIN(day_delivery) AS max_delay,
+		AVG(CASE WHEN day_delivery > 0 THEN day_delivery ELSE NULL END) AS Average_Daydelay,
+		-AVG(CASE WHEN day_delivery < 0 THEN day_delivery ELSE NULL END) AS Average_Ontime
+FROM time_delay;
 
 -- Compare the effect of delayed delivery time on customer satisfaction
-WITH delay_day AS --Create CTE time delay
+WITH time_delay AS --Create CTE time delay
 (
 	SELECT	order_id, 
 			DATEDIFF(day, order_delivered_customer_date,  order_estimated_delivery_date) as day_delay
@@ -244,50 +244,51 @@ WITH delay_day AS --Create CTE time delay
 avg_score_delay as 
 (
 	SELECT  AVG(review_score) avg_score_delay
-	FROM delay_day d
+	FROM time_delay d
 	JOIN order_reviews o
 		ON d.order_id = o.order_id
 	WHERE day_delay<0
 ),
-avg_score_no_delay as
+avg_Ontime as
 (
-	SELECT  AVG(review_score) avg_score_no_delay
-	FROM delay_day d
+	SELECT  AVG(review_score) avg_Ontime
+	FROM time_delay d
 	JOIN order_reviews o
 		ON d.order_id = o.order_id
 	WHERE day_delay>0
 )
-SELECT avg_score_delay,avg_score_no_delay
-FROM avg_score_delay, avg_score_no_delay
+SELECT avg_score_delay, avg_Ontime
+FROM avg_score_delay, avg_Ontime;
 
 
 --The total of each payment method 
 SELECT payment_type,SUM(payment_value) as total
 FROM order_payments
 GROUP BY payment_type
-ORDER BY 2 DESC
+ORDER BY 2 DESC;
 
 --Time delay with each month
-WITH delay_day_2 AS
+WITH time_delay AS
 (
-	SELECT	DATEDIFF(hour, order_delivered_customer_date,  
-			order_estimated_delivery_date)/24.0 as Day_delay,
-			DATENAME(MONTH, order_delivered_customer_date) AS Month
+	SELECT	DATEDIFF(day, order_delivered_customer_date,  
+			order_estimated_delivery_date) as day_delivery,
+			DATENAME(MONTH, order_approved_at) AS Month,
+			DATENAME(YEAR, order_approved_at) AS Year
 	FROM orders
 )
 SELECT	Month, 
-		SUM(Day_delay) AS Total_hour
-FROM delay_day_2
-WHERE Month is not NULL
+		-SUM(CASE WHEN day_delivery < 0 THEN day_delivery ELSE NULL END) AS Total_delay
+FROM time_delay
+WHERE Month is not NULL and Year = 2017
 GROUP BY Month
-ORDER BY 2 DESC
+ORDER BY 2 DESC;
 
 --5. Geographical Insights
 --TOP 10 cities with the highest number of sales
 SELECT TOP 10 seller_city, COUNT(*) as number_of_sallers
 FROM sellers
 GROUP BY seller_city
-ORDER BY 2 DESC
+ORDER BY 2 DESC;
 
 --Top Cities with the Highest Number of Orders and Order Percentage
 WITH sub AS (
@@ -306,7 +307,3 @@ SELECT TOP 10
     (sub.number_of_orders * 100.0 / total_orders.total) AS order_percentage
 FROM sub, total_orders
 ORDER BY sub.number_of_orders DESC;
-
-
-
-
