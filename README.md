@@ -1,4 +1,8 @@
 # Ecommerce Analysis 📊
+📊[Dataset](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce)
+
+🔗[Portfolio](https://data-portfolio-h.notion.site/Ecommerce-Analysis-02df964471e141b68b1b641d4a835357) On this site, I analyze detailed project
+
 ![image](https://github.com/user-attachments/assets/3e972aa9-4c47-4200-8e33-506767830a8d)
 
 ## Leverage SQL queries to find meaningful insights from the data
