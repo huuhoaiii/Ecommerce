@@ -1,4 +1,6 @@
-# Ecommerce Data Analytics 📊
+# Ecommerce Analysis 📊
+![image](https://github.com/user-attachments/assets/3e972aa9-4c47-4200-8e33-506767830a8d)
+
 ## Leverage SQL queries to find meaningful insights from the data
 ### 1. Customer Behavior Analysis
 - Top 10 Highest Frequency Customers and Their Purchasing Habits
